@@ -10,10 +10,11 @@ import (
 	"os"
 	"time"
 	"video-chat/internal/handlers"
+	"video-chat/pkg/webrtc"
 )
 
 var (
-	addr = flag.String("addr", os.Getenv("PORT"), "")
+	addr = flag.String("addr", ":"+os.Getenv("PORT"), "")
 	cert = flag.String("cert", "", "")
 	key  = flag.String("key", "", "")
 )
@@ -43,8 +44,28 @@ func Run() error {
 	app.Get("/room/:uuid/viewer/websocket", websocket.New(handlers.RoomViewerWebsocket))
 
 	app.Get("/stream/:ssuuid", handlers.Stream)
-	app.Get("/stream/:ssuuid/websocket")
-	app.Get("/stream/:ssuuid/chat/websocket")
-	app.Get("/stream/:ssuuid/viewer/websocket")
+	app.Get("/stream/:ssuuid/websocket", websocket.New(handlers.StreamWebsocket, websocket.Config{HandshakeTimeout: 10 * time.Second}))
+	app.Get("/stream/:ssuuid/chat/websocket", websocket.New(handlers.StreamChatWebsocket))
+	app.Get("/stream/:ssuuid/viewer/websocket", websocket.New(handlers.StreamViewerWebsocket))
 
+	app.Static("/", "./assets")
+
+	webrtc.Rooms = make(map[string]*webrtc.Room)
+	webrtc.Streams = make(map[string]*webrtc.Room)
+
+	go dispatchKeyFrames()
+
+	if *cert != "" {
+		return app.ListenTLS(*addr, *cert, *key)
+	}
+
+	return app.Listen(*addr)
+}
+
+func dispatchKeyFrames() {
+	for range time.NewTicker(time.Second * 3).C {
+		for _, room := range webrtc.Rooms {
+			room.Peers.DispatchKeyFrame()
+		}
+	}
 }

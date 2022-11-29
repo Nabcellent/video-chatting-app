@@ -6,7 +6,13 @@ import (
 	"github.com/gofiber/websocket/v2"
 	guuid "github.com/google/uuid"
 	"net/http"
+	"video-chat/pkg/webrtc"
 )
+
+type WebsocketMessage struct {
+	Event string `json:"event"`
+	Data  string `json:"data"`
+}
 
 func RoomCreate(c *fiber.Ctx) error {
 	return c.Redirect(fmt.Sprintf("/room/%s", guuid.NewString()))
@@ -33,8 +39,17 @@ func RoomWebsocket(c *websocket.Conn) {
 
 	_, _, room := createOrGetRoom(uuid)
 
+	webrtc.RoomConn(room.Peers)
 }
 
-func createOrGetRoom(uuid string) (string, string, Room) {
+func createOrGetRoom(uuid string) (string, string, webrtc.Room) {
+
+}
+
+func RoomViewerWebSocket(c *websocket.Conn) {
+
+}
+
+func roomViewerConn(c *websocket.Conn, p *webrtc.Peers) {
 
 }
